@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Forex TP & Lot Calculator</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Poppins", system-ui, sans-serif;
+        background: radial-gradient(circle at top, #0f172a, #020617);
+        color: #f8fafc;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      }
+
+      .container {
+        background: rgba(30, 41, 59, 0.9);
+        backdrop-filter: blur(8px);
+        padding: 1.8rem;
+        border-radius: 1rem;
+        max-width: 460px;
+        width: 100%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        animation: fadeIn 0.6s ease;
+      }
+
+      h2 {
+        color: #facc15;
+        text-align: center;
+        margin-bottom: 1rem;
+        font-size: 1.4rem;
+      }
+
+      label {
+        display: block;
+        margin-top: 0.8rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        font-size: 0.95rem;
+      }
+
+      textarea,
+      input {
+        width: 100%;
+        margin-top: 0.4rem;
+        padding: 0.75rem;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: #334155;
+        color: #f8fafc;
+        font-size: 0.95rem;
+        outline: none;
+        transition: 0.2s;
+      }
+
+      textarea:focus,
+      input:focus {
+        border-color: #facc15;
+        box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.3);
+      }
+
+      #calculateBtn {
+        width: 100%;
+        background: #facc15;
+        color: #0f172a;
+        border: none;
+        border-radius: 8px;
+        margin-top: 1.2rem;
+        padding: 0.8rem;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.25s ease;
+      }
+
+      #calculateBtn:hover {
+        background: #eab308;
+        transform: translateY(-1px);
+      }
+
+      .result {
+        margin-top: 1rem;
+        background: #0b1220;
+        border: 1px solid #1e293b;
+        padding: 1rem;
+        border-radius: 0.8rem;
+        font-size: 0.92rem;
+      }
+
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin: 0.4rem 0;
+      }
+
+      .row strong {
+        color: #facc15;
+      }
+      hr {
+        border: none;
+        border-top: 1px solid #334155;
+        margin: 0.8rem 0;
+      }
+
+      .copy-btn {
+        background: #facc15;
+        color: #0f172a;
+        border: none;
+        border-radius: 6px;
+        padding: 0.3rem 0.6rem;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 0.8rem;
+        transition: 0.2s ease;
+      }
+
+      .copy-btn:hover {
+        background: #eab308;
+        transform: scale(1.05);
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .container {
+          padding: 1.2rem;
+          max-width: 95%;
+        }
+        h2 {
+          font-size: 1.2rem;
+        }
+        textarea,
+        input {
+          font-size: 0.9rem;
+        }
+        .copy-btn {
+          font-size: 0.75rem;
+          padding: 0.25rem 0.5rem;
+        }
+      }
+
+      @media (max-width: 360px) {
+        body {
+          padding: 0.5rem;
+        }
+        .container {
+          padding: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Forex TP & Lot Calculator</h2>
+
+      <label>Paste Bot Signal</label>
+      <textarea id="signalInput" rows="3" placeholder="paste signal"></textarea>
+
+      <label>Entry Price</label>
+      <input
+        id="entryInput"
+        type="number"
+        step="any"
+        placeholder="Enter entry price (e.g. 1.39542)"
+      />
+
+      <label>Account Balance (stored automatically)</label>
+      <input
+        id="balanceInput"
+        type="number"
+        step="any"
+        placeholder="e.g. 1000.00"
+      />
+
+      <label>Risk % per Trade (stored automatically)</label>
+      <input id="riskInput" type="number" step="any" placeholder="e.g. 1.5" />
+
+      <button id="calculateBtn">Calculate</button>
+
+      <div id="result" class="result small"></div>
+    </div>
+
+    <script>
+      // auto load from localStorage on page load
+      window.addEventListener("DOMContentLoaded", () => {
+        const storedBalance = localStorage.getItem("account_balance");
+        const storedRisk = localStorage.getItem("risk_percent");
+
+        if (storedBalance)
+          document.getElementById("balanceInput").value = storedBalance;
+        if (storedRisk) document.getElementById("riskInput").value = storedRisk;
+      });
+
+      // Precision helper
+      function getPrecision(pair) {
+        if (!pair) return 5;
+        if (pair.includes("JPY")) return 3;
+        if (
+          pair.includes("XAU") ||
+          pair.includes("GOLD") ||
+          pair.includes("BTC") ||
+          pair.includes("ETH")
+        )
+          return 2;
+        return 5;
+      }
+
+      function formatNum(n, p) {
+        return Number.isFinite(n) ? n.toFixed(p) : "—";
+      }
+
+      // Copy button event
+      document.getElementById("result").addEventListener("click", (e) => {
+        const btn = e.target.closest(".copy-btn");
+        if (!btn) return;
+        const val = btn.dataset.value;
+        navigator.clipboard.writeText(val);
+        btn.textContent = "Copied!";
+        setTimeout(() => (btn.textContent = "Copy"), 1000);
+      });
+
+      // Main calculation
+      document
+        .getElementById("calculateBtn")
+        .addEventListener("click", calculateTP);
+
+      function calculateTP() {
+        const text = document.getElementById("signalInput").value || "";
+        const entry = parseFloat(document.getElementById("entryInput").value);
+        const balanceInput = document.getElementById("balanceInput");
+        const riskInput = document.getElementById("riskInput");
+
+        let balance = parseFloat(balanceInput.value);
+        let riskPercent = parseFloat(riskInput.value);
+
+        const storedBalance = localStorage.getItem("account_balance");
+        const storedRisk = localStorage.getItem("risk_percent");
+
+        // Auto-use stored if input empty
+        if (isNaN(balance) && storedBalance)
+          balance = parseFloat(storedBalance);
+        if (isNaN(riskPercent) && storedRisk)
+          riskPercent = parseFloat(storedRisk);
+
+        // Save or update if new values entered
+        if (!isNaN(balance)) localStorage.setItem("account_balance", balance);
+        if (!isNaN(riskPercent))
+          localStorage.setItem("risk_percent", riskPercent);
+
+        if (isNaN(balance) || isNaN(riskPercent)) {
+          alert("⚠️ Please provide or have saved Account Balance and Risk%.");
+          return;
+        }
+
+        if (!text.trim() || isNaN(entry)) {
+          alert(
+            "⚠️ Please paste the signal text and provide a valid entry price."
+          );
+          return;
+        }
+
+        const pairMatch = text.match(/Pair:\s*([A-Z0-9\/_]+)/i);
+        const sideMatch = text.match(
+          /Side:\s*(buy_signal|sell_signal|buy|sell)/i
+        );
+        const slMatch = text.match(/SL:\s*([0-9.]+)/i);
+
+        if (!pairMatch || !sideMatch || !slMatch) {
+          alert("⚠️ Invalid signal format. Expecting Pair:, Side:, SL: lines.");
+          return;
+        }
+
+        const pair = pairMatch[1].toUpperCase();
+        const side = sideMatch[1].toLowerCase().includes("buy")
+          ? "buy"
+          : "sell";
+        const sl = parseFloat(slMatch[1]);
+        const precision = getPrecision(pair);
+
+        let riskPrice = side === "buy" ? entry - sl : sl - entry;
+        if (riskPrice <= 0) {
+          alert(
+            "⚠️ Risk value is zero or negative — please check Entry and SL."
+          );
+          return;
+        }
+
+        const pipMultiplier = pair.includes("JPY") ? 100 : 10000;
+        const pipsRisk = Math.abs(riskPrice * pipMultiplier);
+        const riskAmount = balance * (riskPercent / 100);
+        const pipValuePerLot = pair.includes("JPY") ? 9.1 : 10;
+        const lotSize = riskAmount / (pipsRisk * pipValuePerLot);
+
+        const tp1 = side === "buy" ? entry + riskPrice : entry - riskPrice;
+        const tp3 =
+          side === "buy" ? entry + riskPrice * 3 : entry - riskPrice * 3;
+
+        document.getElementById("result").innerHTML = `
+        <div class="row"><strong>Pair:</strong><span>${pair}</span></div>
+        <div class="row"><strong>Side:</strong><span>${side}</span></div>
+        <div class="row"><strong>Stop Loss:</strong>
+          <span>${formatNum(sl, precision)} 
+          <button class="copy-btn" data-value="${formatNum(
+            sl,
+            precision
+          )}">Copy</button></span></div>
+        <hr>
+        <div class="row"><strong>Pips Risk:</strong><span>${pipsRisk.toFixed(
+          1
+        )} pips</span></div>
+        <div class="row"><strong>Lot Size:</strong><span>${lotSize.toFixed(
+          2
+        )} lots</span></div>
+        <div class="row"><strong>Risk Amount:</strong><span>$${riskAmount.toFixed(
+          2
+        )}</span></div>
+        <hr>
+        <div class="row"><strong>TP (1:1):</strong>
+          <span>${formatNum(tp1, precision)} 
+          <button class="copy-btn" data-value="${formatNum(
+            tp1,
+            precision
+          )}">Copy</button></span></div>
+        <div class="row"><strong>TP (1:3):</strong>
+          <span>${formatNum(tp3, precision)} 
+          <button class="copy-btn" data-value="${formatNum(
+            tp3,
+            precision
+          )}">Copy</button></span></div>
+      `;
+      }
+    </script>
+  </body>
+</html>
