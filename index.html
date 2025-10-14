@@ -202,7 +202,7 @@
     </div>
 
     <script>
-      // auto load from localStorage on page load
+      // Auto load from localStorage on page load
       window.addEventListener("DOMContentLoaded", () => {
         const storedBalance = localStorage.getItem("account_balance");
         const storedRisk = localStorage.getItem("risk_percent");
@@ -247,15 +247,25 @@
 
       function calculateTP() {
         const text = document.getElementById("signalInput").value || "";
-        const entry = parseFloat(document.getElementById("entryInput").value);
+        const entryInput = document.getElementById("entryInput");
         const balanceInput = document.getElementById("balanceInput");
         const riskInput = document.getElementById("riskInput");
 
+        let entry = parseFloat(entryInput.value);
         let balance = parseFloat(balanceInput.value);
         let riskPercent = parseFloat(riskInput.value);
 
         const storedBalance = localStorage.getItem("account_balance");
         const storedRisk = localStorage.getItem("risk_percent");
+
+        // Try to auto-detect entry from signal text if empty
+        if (isNaN(entry)) {
+          const entryMatch = text.match(/Entry(?: Price)?:\s*([0-9.]+)/i);
+          if (entryMatch) {
+            entry = parseFloat(entryMatch[1]);
+            entryInput.value = entry; // ✅ Auto-fill entry input
+          }
+        }
 
         // Auto-use stored if input empty
         if (isNaN(balance) && storedBalance)
@@ -275,7 +285,7 @@
 
         if (!text.trim() || isNaN(entry)) {
           alert(
-            "⚠️ Please paste the signal text and provide a valid entry price."
+            "⚠️ Please paste the signal text and ensure Entry price is valid."
           );
           return;
         }
@@ -287,7 +297,9 @@
         const slMatch = text.match(/SL:\s*([0-9.]+)/i);
 
         if (!pairMatch || !sideMatch || !slMatch) {
-          alert("⚠️ Invalid signal format. Expecting Pair:, Side:, SL: lines.");
+          alert(
+            "⚠️ Invalid signal format. Expecting Pair:, Side:, SL:, Entry: lines."
+          );
           return;
         }
 
@@ -317,38 +329,44 @@
           side === "buy" ? entry + riskPrice * 3 : entry - riskPrice * 3;
 
         document.getElementById("result").innerHTML = `
-        <div class="row"><strong>Pair:</strong><span>${pair}</span></div>
-        <div class="row"><strong>Side:</strong><span>${side}</span></div>
-        <div class="row"><strong>Stop Loss:</strong>
-          <span>${formatNum(sl, precision)} 
-          <button class="copy-btn" data-value="${formatNum(
-            sl,
-            precision
-          )}">Copy</button></span></div>
-        <hr>
-        <div class="row"><strong>Pips Risk:</strong><span>${pipsRisk.toFixed(
-          1
-        )} pips</span></div>
-        <div class="row"><strong>Lot Size:</strong><span>${lotSize.toFixed(
-          2
-        )} lots</span></div>
-        <div class="row"><strong>Risk Amount:</strong><span>$${riskAmount.toFixed(
-          2
-        )}</span></div>
-        <hr>
-        <div class="row"><strong>TP (1:1):</strong>
-          <span>${formatNum(tp1, precision)} 
-          <button class="copy-btn" data-value="${formatNum(
-            tp1,
-            precision
-          )}">Copy</button></span></div>
-        <div class="row"><strong>TP (1:3):</strong>
-          <span>${formatNum(tp3, precision)} 
-          <button class="copy-btn" data-value="${formatNum(
-            tp3,
-            precision
-          )}">Copy</button></span></div>
-      `;
+      <div class="row"><strong>Pair:</strong><span>${pair}</span></div>
+      <div class="row"><strong>Side:</strong><span>${side}</span></div>
+      <div class="row"><strong>Entry:</strong>
+        <span>${formatNum(entry, precision)} 
+        <button class="copy-btn" data-value="${formatNum(
+          entry,
+          precision
+        )}">Copy</button></span></div>
+      <div class="row"><strong>Stop Loss:</strong>
+        <span>${formatNum(sl, precision)} 
+        <button class="copy-btn" data-value="${formatNum(
+          sl,
+          precision
+        )}">Copy</button></span></div>
+      <hr>
+      <div class="row"><strong>Pips Risk:</strong><span>${pipsRisk.toFixed(
+        1
+      )} pips</span></div>
+      <div class="row"><strong>Lot Size:</strong><span>${lotSize.toFixed(
+        2
+      )} lots</span></div>
+      <div class="row"><strong>Risk Amount:</strong><span>$${riskAmount.toFixed(
+        2
+      )}</span></div>
+      <hr>
+      <div class="row"><strong>TP (1:1):</strong>
+        <span>${formatNum(tp1, precision)} 
+        <button class="copy-btn" data-value="${formatNum(
+          tp1,
+          precision
+        )}">Copy</button></span></div>
+      <div class="row"><strong>TP (1:3):</strong>
+        <span>${formatNum(tp3, precision)} 
+        <button class="copy-btn" data-value="${formatNum(
+          tp3,
+          precision
+        )}">Copy</button></span></div>
+    `;
       }
     </script>
   </body>
